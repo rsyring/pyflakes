@@ -4,6 +4,7 @@ import textwrap
 import unittest
 
 from pyflakes import checker
+from pyflakes.reporter import Reporter
 
 __all__ = ['TestCase', 'skip', 'skipIf']
 
@@ -41,3 +42,9 @@ but got:
         def assertIs(self, expr1, expr2, msg=None):
             if expr1 is not expr2:
                 self.fail(msg or '%r is not %r' % (expr1, expr2))
+
+
+class ListWriter(list):
+
+    def write(self, value):
+        self.append(value)

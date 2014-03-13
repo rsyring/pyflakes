@@ -240,7 +240,7 @@ class Checker(object):
     del _customBuiltIns
 
     def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ):
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ, ignore_lines=[]):
         self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
@@ -250,6 +250,7 @@ class Checker(object):
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
+        self.ignore_lines = ignore_lines
         self.scopeStack = [ModuleScope()]
         self.exceptHandlers = [()]
         self.futuresAllowed = True
@@ -337,7 +338,9 @@ class Checker(object):
         self.pushScope(ClassScope)
 
     def report(self, messageClass, *args, **kwargs):
-        self.messages.append(messageClass(self.filename, *args, **kwargs))
+        message = messageClass(self.filename, *args, **kwargs)
+        if message.lineno not in self.ignore_lines:
+            self.messages.append(message)
 
     def hasParent(self, node, kind):
         while hasattr(node, 'parent'):

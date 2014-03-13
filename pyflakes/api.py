@@ -6,12 +6,31 @@ from __future__ import with_statement
 import sys
 import os
 import _ast
+import re
+from token import N_TOKENS
+import tokenize
+from StringIO import StringIO
 from optparse import OptionParser
 
 from pyflakes import checker, __version__
 from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
+
+_re_noqa = re.compile(r'((pyflakes|flake8)[:=]\s*noqa)|(#\s*noqa)', re.I)
+
+
+def _noqa_lines(codeString):
+    line_nums = []
+    g = tokenize.generate_tokens(StringIO(codeString).readline)   # tokenize the string
+    for toknum, tokval, begins, _, _ in g:
+        lineno = begins[0]
+        # not sure what N_TOKENS really means, but in testing, that was what comments were
+        # tokenized as
+        if toknum == N_TOKENS:
+            if _re_noqa.search(tokval):
+                line_nums.append(lineno)
+    return line_nums
 
 
 def check(codeString, filename, reporter=None):
@@ -54,8 +73,11 @@ def check(codeString, filename, reporter=None):
     except Exception:
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
+    # since it's valid, lets look for noqa lines
+    noqa_line_nums = _noqa_lines(codeString)
+
     # Okay, it's syntactically valid.  Now check it.
-    w = checker.Checker(tree, filename)
+    w = checker.Checker(tree, filename, ignore_lines=noqa_line_nums)
     w.messages.sort(key=lambda m: m.lineno)
     for warning in w.messages:
         reporter.flake(warning)
